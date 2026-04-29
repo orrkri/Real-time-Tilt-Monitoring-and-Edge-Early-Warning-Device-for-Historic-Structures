@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Data directories with large raw images
+1面/*.bmp
+2面/*.bmp
+
+# Debug artifacts
+crop_*.jpg
+debug_*.jpg
+debug_*.png
+diff_*.jpg
+ruler_*.jpg
+ruler_*.png
+
+# Internal tooling
+.superpowers/
+
+# Misc user directories
+多余*/
+
+# Virtual environments
+venv/
+.env/

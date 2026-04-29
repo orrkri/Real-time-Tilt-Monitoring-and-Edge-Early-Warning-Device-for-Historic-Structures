@@ -1,0 +1,47 @@
+%YAML:1.0
+---
+image_width: 2448
+image_height: 2048
+checkerboard_cols: 11
+checkerboard_rows: 8
+square_size_mm: 3.
+rms: 0.25353090606727047
+camera_matrix: !!opencv-matrix
+   rows: 3
+   cols: 3
+   dt: d
+   data: [ 4900.3528661085775, 0., 1188.6890436663882, 0.,
+       4897.4509717351712, 1033.5451271297823, 0., 0., 1. ]
+dist_coeffs: !!opencv-matrix
+   rows: 1
+   cols: 5
+   dt: d
+   data: [ -0.099827308357725131, -0.31140721344526145,
+       -0.00021817366030087889, -0.00015840967279728463,
+       1.7026391275780262 ]
+used_images:
+   - "./calibration_images\\11.jpg"
+   - "./calibration_images\\12.jpg"
+   - "./calibration_images\\13.jpg"
+   - "./calibration_images\\21.jpg"
+   - "./calibration_images\\22.jpg"
+   - "./calibration_images\\23.jpg"
+   - "./calibration_images\\31.jpg"
+   - "./calibration_images\\32.jpg"
+   - "./calibration_images\\41.jpg"
+   - "./calibration_images\\42.jpg"
+   - "./calibration_images\\43.jpg"
+   - "./calibration_images\\5.jpg"
+per_image_errors:
+   - 0.016858096251188899
+   - 0.0098678552717610928
+   - 0.067521798334877467
+   - 0.010855744940124907
+   - 0.011377344704054326
+   - 0.051871448850348598
+   - 0.010997818970504105
+   - 0.010376921124180911
+   - 0.0097314582709113508
+   - 0.010551329698907172
+   - 0.010773476956647272
+   - 0.018323086275440478
