@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>墙体隆起区域分析</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <aside class="side">
+      <header class="brand">
+        <h1>墙体隆起分析</h1>
+        <p>按原严谨逻辑：先框固定参考区，再框墙体分析区，Python 后端做标定校正和全局配准。</p>
+      </header>
+
+      <section class="panel">
+        <label class="file-label">
+          <span>基准图</span>
+          <input id="baseInput" type="file" accept="image/*,.bmp">
+        </label>
+        <label class="file-label">
+          <span>待计算图</span>
+          <input id="targetInput" type="file" accept="image/*,.bmp">
+        </label>
+      </section>
+
+      <section class="panel controls">
+        <label>
+          <span>分区列数</span>
+          <input id="colsInput" type="number" min="2" max="16" value="4">
+        </label>
+        <label>
+          <span>分区行数</span>
+          <input id="rowsInput" type="number" min="2" max="16" value="6">
+        </label>
+        <label>
+          <span>距离(m)</span>
+          <input id="distanceInput" type="number" min="1" max="200" step="0.1" value="25">
+        </label>
+      </section>
+
+      <details class="panel camera-panel">
+        <summary>相机参数</summary>
+        <div class="camera-grid">
+          <label><span>fx</span><input id="fxInput" type="number" step="0.000001" value="4900.35287"></label>
+          <label><span>fy</span><input id="fyInput" type="number" step="0.000001" value="4897.45097"></label>
+          <label><span>cx</span><input id="cxInput" type="number" step="0.000001" value="1188.68904"></label>
+          <label><span>cy</span><input id="cyInput" type="number" step="0.000001" value="1033.54513"></label>
+          <label><span>k1</span><input id="k1Input" type="number" step="0.000000001" value="-0.0998273084"></label>
+          <label><span>k2</span><input id="k2Input" type="number" step="0.000000001" value="-0.311407213"></label>
+          <label><span>p1</span><input id="p1Input" type="number" step="0.000000001" value="-0.00021817366"></label>
+          <label><span>p2</span><input id="p2Input" type="number" step="0.000000001" value="-0.000158409673"></label>
+          <label><span>k3</span><input id="k3Input" type="number" step="0.000000001" value="1.70263913"></label>
+        </div>
+        <button id="resetCameraBtn" type="button">恢复默认相机参数</button>
+      </details>
+
+      <section class="panel mode-panel">
+        <div class="mode-buttons">
+          <button id="refModeBtn" type="button" class="active">框固定参考区</button>
+          <button id="wallModeBtn" type="button">框墙体分析区</button>
+        </div>
+        <p class="hint">蓝色是固定参考区，可框多个；红色是墙体分析区，只保留最后一个。</p>
+      </section>
+
+      <section class="panel actions">
+        <button id="useDefaultRoi" type="button" title="使用历史 25m 默认范围">默认双区</button>
+        <button id="clearRoi" type="button" title="清除当前框选">清除</button>
+        <button id="analyzeBtn" type="button" class="primary" disabled>开始计算</button>
+      </section>
+
+      <section id="summaryPanel" class="panel result-panel hidden">
+        <h2>结果</h2>
+        <dl class="metrics">
+          <div><dt>预测隆起</dt><dd id="predictedBulgeValue">-</dd></div>
+          <div><dt>校正后墙面整体位移</dt><dd id="medianValue">-</dd></div>
+          <div><dt>局部突出强度</dt><dd id="residualP95Value">-</dd></div>
+          <div><dt>全局参照运动</dt><dd id="stdValue">-</dd></div>
+          <div><dt>墙面匹配质量</dt><dd id="qualityValue">-</dd></div>
+          <div><dt>ECC相关系数</dt><dd id="globalCcValue">-</dd></div>
+        </dl>
+        <div class="download-row">
+          <button id="downloadPng" type="button">下载标注图</button>
+          <button id="downloadCsv" type="button">下载CSV</button>
+        </div>
+      </section>
+    </aside>
+
+    <section class="workspace">
+      <div class="toolbar">
+        <div class="tabs" role="tablist" aria-label="图像视图">
+          <button id="baseTab" type="button" class="active">基准图框选</button>
+          <button id="targetTab" type="button">结果标注</button>
+        </div>
+        <output id="statusText">请先上传两张图片。</output>
+      </div>
+      <div class="canvas-frame">
+        <canvas id="viewCanvas"></canvas>
+      </div>
+      <div class="table-wrap hidden" id="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>行</th>
+              <th>列</th>
+              <th>dx(px)</th>
+              <th>dy(px)</th>
+              <th>位移(px)</th>
+              <th>局部残差(px)</th>
+              <th>匹配质量</th>
+            </tr>
+          </thead>
+          <tbody id="detailRows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>
