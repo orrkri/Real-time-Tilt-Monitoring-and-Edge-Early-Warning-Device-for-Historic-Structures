@@ -1,0 +1,7 @@
+# Preserve document and media bytes; disable text and line-ending conversion.
+*.pdf binary
+*.docx binary
+*.zip binary
+*.png binary
+*.jpg binary
+*.jpeg binary

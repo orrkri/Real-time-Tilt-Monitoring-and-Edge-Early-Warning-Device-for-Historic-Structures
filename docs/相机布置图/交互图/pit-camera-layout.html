@@ -1,0 +1,147 @@
+<div id="pit-camera-layout">
+  <style>
+    #pit-camera-layout { color: var(--foreground); }
+    #pit-camera-layout .layout-figure { display: block; width: 100%; }
+    #pit-camera-layout .layout-figure text { fill: var(--foreground); font-size: var(--font-size-base); font-weight: 400; }
+    #pit-camera-layout .layout-figure .secondary-label { fill: var(--muted-foreground); }
+    #pit-camera-layout .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 8px; }
+    #pit-camera-layout .key { display: inline-flex; align-items: center; gap: 6px; }
+    #pit-camera-layout .camera-key { width: 12px; height: 12px; border-radius: 50%; background: var(--viz-series-1); }
+    #pit-camera-layout .target-key { width: 10px; height: 10px; background: var(--foreground); }
+    #pit-camera-layout .corner-key { width: 10px; height: 10px; background: var(--viz-series-2); transform: rotate(45deg); }
+    #pit-camera-layout .control-key { color: var(--muted-foreground); font-weight: 500; }
+    #pit-camera-layout .selected-detail { margin-top: 12px; }
+  </style>
+  <h3>对岸观测布局 · 精度未验证</h3>
+  <div class="text-small">工作距离约 50 m 或更远；此布局尚未通过 5 mm 精度验证。</div>
+  <details>
+  <summary>展开候选布局</summary>
+  <div class="viz-controls" aria-label="选择被测墙面">
+    <span>被测墙：</span>
+    <button type="button" class="btn" data-wall="N" aria-pressed="true">北墙</button>
+    <button type="button" class="btn" data-wall="E" aria-pressed="false">东墙</button>
+    <button type="button" class="btn" data-wall="S" aria-pressed="false">南墙</button>
+    <button type="button" class="btn" data-wall="W" aria-pressed="false">西墙</button>
+  </div>
+  <svg class="layout-figure" role="img" aria-labelledby="pit-layout-title pit-layout-desc"></svg>
+  <div class="legend text-small">
+    <span class="key"><span class="camera-key"></span>圆点：相机位置</span>
+    <span class="key"><span class="target-key"></span>方点：墙面靶标</span>
+    <span class="key"><span class="corner-key"></span>菱形：墙角测点</span>
+    <span class="key"><span class="control-key">R</span>外部控制点，稳定性需核验</span>
+  </div>
+  <div class="selected-detail" aria-live="polite"></div>
+  <div class="text-small text-muted">概念布局；外围退距、相机间距和安装高度未定。墙面靶标仅示意，数量与竖向层数待设计。</div>
+  </details>
+  <script>
+    (() => {
+      const root = document.getElementById('pit-camera-layout');
+      const svg = root.querySelector('.layout-figure');
+      const detail = root.querySelector('.selected-detail');
+      const buttons = Array.from(root.querySelectorAll('[data-wall]'));
+      const names = { N: '北墙', E: '东墙', S: '南墙', W: '西墙' };
+      const banks = { N: '南侧外围', E: '西侧外围', S: '北侧外围', W: '东侧外围' };
+      const pairs = {
+        N: [[0.35, 0.90], [0.65, 0.90]],
+        E: [[0.10, 0.35], [0.10, 0.65]],
+        S: [[0.35, 0.08], [0.65, 0.08]],
+        W: [[0.90, 0.35], [0.90, 0.65]]
+      };
+      let selected = 'N';
+      const restore = state => {
+        const value = state?.modelContent?.selectedWall;
+        if (names[value]) selected = value;
+      };
+      restore(window.openai?.widgetState);
+      const point = (wall, t, width) => {
+        const along = 0.22 + 0.56 * t;
+        if (wall === 'N') return [along * width, 0.21 * width];
+        if (wall === 'S') return [along * width, 0.77 * width];
+        if (wall === 'E') return [0.78 * width, (0.21 + 0.56 * t) * width];
+        return [0.22 * width, (0.21 + 0.56 * t) * width];
+      };
+      const ns = 'http://www.w3.org/2000/svg';
+      const make = (tag, attrs = {}, text) => {
+        const el = document.createElementNS(ns, tag);
+        for (const [key, value] of Object.entries(attrs)) el.setAttribute(key, value);
+        if (text !== undefined) el.textContent = text;
+        svg.appendChild(el);
+        return el;
+      };
+      const label = (x, y, text, attrs = {}) => make('text', { x, y, 'text-anchor': 'middle', ...attrs }, text);
+      function draw() {
+        const width = Math.max(300, root.getBoundingClientRect().width);
+        const font = parseFloat(getComputedStyle(root).fontSize) || 14;
+        svg.setAttribute('viewBox', `0 0 ${width} ${width + 8}`);
+        svg.setAttribute('height', width + 8);
+        svg.replaceChildren();
+        make('title', { id: 'pit-layout-title' }, `50米正方形基坑，八台外围相机候选布局，当前观察${names[selected]}`);
+        make('desc', { id: 'pit-layout-desc' }, `${names[selected]}由${banks[selected]}的${selected}1和${selected}2共同观测。其余相机位置保留，四个墙角设测点，坑外设置需核验的控制目标。图为俯视，不表示支撑遮挡或已保证精度。`);
+        make('rect', { x: 0.22 * width, y: 0.21 * width, width: 0.56 * width, height: 0.56 * width, fill: 'var(--muted)', 'fill-opacity': 0.28 });
+        const endpoints = [point(selected, 0, width), point(selected, 1, width)];
+        for (const camera of pairs[selected]) {
+          const origin = camera.map(v => v * width);
+          make('polygon', { points: [origin, ...endpoints].map(p => p.join(',')).join(' '), fill: 'var(--viz-series-1)', 'fill-opacity': 0.06 });
+          for (const t of [0, 1]) {
+            const p = point(selected, t, width);
+            make('line', { x1: origin[0], y1: origin[1], x2: p[0], y2: p[1], stroke: 'var(--viz-series-1)', 'stroke-width': 1, 'stroke-opacity': 0.35 });
+          }
+          const p = point(selected, 0.5, width);
+          make('line', { x1: origin[0], y1: origin[1], x2: p[0], y2: p[1], stroke: 'var(--viz-series-1)', 'stroke-width': 1.5 });
+        }
+        for (const wall of Object.keys(names)) {
+          const a = point(wall, 0, width), b = point(wall, 1, width);
+          make('line', { x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: wall === selected ? 'var(--viz-series-1)' : 'var(--foreground)', 'stroke-width': wall === selected ? 3 : 1.5 });
+          for (const t of [0.08, 0.29, 0.5, 0.71, 0.92]) {
+            const [x, y] = point(wall, t, width);
+            make('rect', { x: x - 3, y: y - 3, width: 6, height: 6, fill: wall === selected ? 'var(--viz-series-1)' : 'var(--foreground)' });
+          }
+        }
+        label(0.5 * width, 0.21 * width - font * 0.6, '北墙');
+        label(0.5 * width, 0.77 * width + font * 1.3, '南墙');
+        const eastX = 0.78 * width + font * 1.05;
+        const westX = 0.22 * width - font * 0.8;
+        label(eastX, 0.49 * width, '东墙', { transform: `rotate(-90 ${eastX} ${0.49 * width})` });
+        label(westX, 0.49 * width, '西墙', { transform: `rotate(-90 ${westX} ${0.49 * width})` });
+        const captionX = 0.5 * width, captionY = 0.58 * width;
+        make('rect', { x: captionX - font * 5.2, y: captionY - font * 1.1, width: font * 10.4, height: font * 3.1, fill: 'var(--background)', 'fill-opacity': 0.93 });
+        label(captionX, captionY, '50 m × 50 m');
+        label(captionX, captionY + font * 1.5, '坑内不布相机', { class: 'secondary-label' });
+        for (const [wall, cameras] of Object.entries(pairs)) {
+          cameras.forEach((position, index) => {
+            const [x, y] = position.map(v => v * width);
+            const active = wall === selected;
+            make('circle', { cx: x, cy: y, r: active ? 7 : 6, fill: active ? 'var(--viz-series-1)' : 'var(--muted-foreground)', 'fill-opacity': active ? 1 : 0.65 });
+            let textX = x, textY = y;
+            let anchor = 'middle';
+            if (wall === 'N') textY += font * 1.5;
+            if (wall === 'S') textY -= font * 0.9;
+            if (wall === 'E') { textX -= 12; textY += font * 0.35; anchor = 'end'; }
+            if (wall === 'W') { textX -= 12; textY += font * 0.35; anchor = 'end'; }
+            label(textX, textY, `${wall}${index + 1}`, { 'text-anchor': anchor, class: active ? '' : 'secondary-label' });
+          });
+        }
+        for (const [x, y] of [[0.22, 0.21], [0.78, 0.21], [0.78, 0.77], [0.22, 0.77]]) {
+          const px = x * width, py = y * width;
+          make('polygon', { points: `${px},${py - 5} ${px + 5},${py} ${px},${py + 5} ${px - 5},${py}`, fill: 'var(--viz-series-2)' });
+        }
+        [[0.08, 0.17], [0.92, 0.17], [0.08, 0.82], [0.92, 0.82]].forEach(([x, y], i) => {
+          label(x * width, y * width, `R${i + 1}`, { class: 'secondary-label' });
+        });
+        buttons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.wall === selected)));
+        detail.textContent = `${names[selected]} ← ${banks[selected]} ${selected}1 + ${selected}2；两条实线交会于同一靶标，浅色扇区示意各相机的视线范围。`;
+      }
+      buttons.forEach(button => button.addEventListener('click', () => {
+        selected = button.dataset.wall;
+        draw();
+        window.openai?.setWidgetState?.({ modelContent: { selectedWall: selected }, privateContent: null })?.catch(() => {});
+      }));
+      window.addEventListener('openai:set_globals', event => {
+        restore(event.detail?.globals?.widgetState);
+        draw();
+      });
+      new ResizeObserver(draw).observe(root);
+      draw();
+    })();
+  </script>
+</div>

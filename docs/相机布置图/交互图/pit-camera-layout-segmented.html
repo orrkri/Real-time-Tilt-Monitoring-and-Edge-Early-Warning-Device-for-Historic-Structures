@@ -1,0 +1,201 @@
+<div id="pit-camera-layout-segmented">
+  <style>
+    #pit-camera-layout-segmented { color: var(--foreground); }
+    #pit-camera-layout-segmented .pit-plan { display: block; width: 100%; }
+    #pit-camera-layout-segmented .pit-plan text { fill: var(--foreground); font-size: var(--font-size-base); font-weight: 400; }
+    #pit-camera-layout-segmented .pit-plan .muted-label { fill: var(--muted-foreground); }
+    #pit-camera-layout-segmented .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 4px; }
+    #pit-camera-layout-segmented .key { display: inline-flex; align-items: center; gap: 6px; }
+    #pit-camera-layout-segmented .swatch { width: 15px; height: 4px; }
+    #pit-camera-layout-segmented .segment-a { background: var(--viz-series-1); }
+    #pit-camera-layout-segmented .segment-b { background: var(--viz-series-2); }
+    #pit-camera-layout-segmented .camera-key { width: 10px; height: 10px; border-radius: 50%; background: var(--foreground); }
+    #pit-camera-layout-segmented .target-key { width: 8px; height: 8px; background: var(--foreground); }
+    #pit-camera-layout-segmented .corner-key { width: 8px; height: 8px; transform: rotate(45deg); background: var(--foreground); }
+    #pit-camera-layout-segmented .detail { margin-top: 10px; }
+  </style>
+  <h3>16 台相机 · 分段三维测量布局</h3>
+  <div class="text-small">坑外安装 · 每面 2 段 · 每段 2 台同步相机 · 5 mm 为待验收目标</div>
+  <div class="viz-controls" aria-label="选择显示测量视线的墙面">
+    <span>观测视线：</span>
+    <button type="button" class="btn" data-wall="N" aria-pressed="true">北墙</button>
+    <button type="button" class="btn" data-wall="E" aria-pressed="false">东墙</button>
+    <button type="button" class="btn" data-wall="S" aria-pressed="false">南墙</button>
+    <button type="button" class="btn" data-wall="W" aria-pressed="false">西墙</button>
+  </div>
+  <svg class="pit-plan" role="img" aria-labelledby="segmented-pit-title segmented-pit-desc"></svg>
+  <div class="legend text-small">
+    <span class="key"><span class="swatch segment-a"></span>A 段：0–27 m</span>
+    <span class="key"><span class="swatch segment-b"></span>B 段：23–50 m</span>
+    <span class="key">斜纹：4 m 重叠区</span>
+    <span class="key"><span class="camera-key"></span>圆点：相机</span>
+    <span class="key"><span class="target-key"></span>方点：固定靶标</span>
+    <span class="key"><span class="corner-key"></span>菱形：墙角测点</span>
+  </div>
+  <div class="detail" aria-live="polite"></div>
+  <div class="text-small">D ≥ 50 m：工作距离下限；B ≈ 20 m：同组相机基线算例。</div>
+  <div class="text-small text-muted">概念俯视图；外围退距与安装高度待定。R 为需核验稳定性的外部控制目标，墙角及支撑盲区待现场检查。</div>
+  <script>
+    (() => {
+      const root = document.getElementById('pit-camera-layout-segmented');
+      const svg = root.querySelector('.pit-plan');
+      const detail = root.querySelector('.detail');
+      const buttons = Array.from(root.querySelectorAll('[data-wall]'));
+      const names = { N: '北墙', E: '东墙', S: '南墙', W: '西墙' };
+      const banks = { N: '南侧', E: '西侧', S: '北侧', W: '东侧' };
+      const stationAlong = [0, 0.4, 0.6, 1];
+      const segments = [
+        { range: [0, 0.54], middle: 0.27, cameras: [0, 1], color: 'var(--viz-series-1)' },
+        { range: [0.46, 1], middle: 0.73, cameras: [2, 3], color: 'var(--viz-series-2)' }
+      ];
+      let selected = 'N';
+      const restore = state => {
+        const value = state?.modelContent?.selectedWall;
+        if (names[value]) selected = value;
+      };
+      restore(window.openai?.widgetState);
+      const ns = 'http://www.w3.org/2000/svg';
+      const make = (tag, attrs = {}, text, parent = svg) => {
+        const element = document.createElementNS(ns, tag);
+        for (const [key, value] of Object.entries(attrs)) element.setAttribute(key, value);
+        if (text !== undefined) element.textContent = text;
+        parent.appendChild(element);
+        return element;
+      };
+      function draw() {
+        const width = root.getBoundingClientRect().width;
+        if (width <= 0) return;
+        const font = parseFloat(getComputedStyle(root).fontSize) || 14;
+        const top = font * 2.6;
+        const height = width + top + font * 4.2;
+        const xy = (x, y) => [x * width, y * width + top];
+        const wallPoint = (wall, fraction) => {
+          const value = 0.2 + 0.6 * fraction;
+          if (wall === 'N') return xy(value, 0.2);
+          if (wall === 'S') return xy(value, 0.8);
+          if (wall === 'E') return xy(0.8, value);
+          return xy(0.2, value);
+        };
+        const cameraPoint = (wall, index) => {
+          const value = 0.2 + 0.6 * stationAlong[index];
+          if (wall === 'N') return xy(value, 0.92);
+          if (wall === 'S') return xy(value, 0.08);
+          if (wall === 'E') return xy(0.08, value);
+          return xy(0.92, value);
+        };
+        const label = (x, y, text, attrs = {}) => make('text', { x, y, 'text-anchor': 'middle', ...attrs }, text);
+        const line = (a, b, attrs = {}) => make('line', { x1: a[0], y1: a[1], x2: b[0], y2: b[1], ...attrs });
+        const note = (x, y, text, attrs = {}) => {
+          const textElement = label(x, y, text, attrs);
+          const box = textElement.getBBox();
+          const background = make('rect', { x: box.x - 4, y: box.y - 2, width: box.width + 8, height: box.height + 4, fill: 'var(--background)', 'fill-opacity': 0.96 });
+          svg.insertBefore(background, textElement);
+          return textElement;
+        };
+        svg.replaceChildren();
+        svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+        svg.setAttribute('height', height);
+        make('title', { id: 'segmented-pit-title' }, `50米正方形基坑，十六台相机，当前显示${names[selected]}的两个重叠测量段`);
+        make('desc', { id: 'segmented-pit-desc' }, `每面墙两段，每段两台相机共同观测，共十六台。${names[selected]}由${banks[selected]}外围的${selected}1、${selected}2测量0至27米，${selected}3、${selected}4测量23至50米，重叠4米。工作距离仍不小于50米，20米基线只是设计算例，精度尚待验证。墙角标出待核验测点，坑外R目标用于稳定控制。`);
+        const defs = make('defs');
+        const pattern = make('pattern', { id: 'segmented-overlap-hatch', width: 6, height: 6, patternUnits: 'userSpaceOnUse', patternTransform: 'rotate(45)' }, undefined, defs);
+        make('line', { x1: 0, y1: 0, x2: 0, y2: 6, stroke: 'var(--foreground)', 'stroke-width': 1 }, undefined, pattern);
+        const corner = xy(0.2, 0.2);
+        make('rect', { x: corner[0], y: corner[1], width: 0.6 * width, height: 0.6 * width, fill: 'var(--muted)', 'fill-opacity': 0.25 });
+        for (const segment of segments) {
+          const ends = segment.range.map(t => wallPoint(selected, t));
+          for (const index of segment.cameras) {
+            const origin = cameraPoint(selected, index);
+            make('polygon', { points: [origin, ...ends].map(p => p.join(',')).join(' '), fill: segment.color, 'fill-opacity': 0.045 });
+            ends.forEach(end => line(origin, end, { stroke: segment.color, 'stroke-width': 1, 'stroke-opacity': 0.3 }));
+            line(origin, wallPoint(selected, segment.middle), { stroke: segment.color, 'stroke-width': 1.5 });
+          }
+        }
+        const selectedWallCentre = wallPoint(selected, 0.5);
+        const c2 = cameraPoint(selected, 1), c3 = cameraPoint(selected, 2);
+        const bankCentre = [(c2[0] + c3[0]) / 2, (c2[1] + c3[1]) / 2];
+        line(selectedWallCentre, bankCentre, { stroke: 'var(--muted-foreground)', 'stroke-width': 1, 'stroke-dasharray': '4 4' });
+        for (const wall of Object.keys(names)) {
+          line(wallPoint(wall, 0), wallPoint(wall, 1), { stroke: 'var(--foreground)', 'stroke-width': 1.5 });
+        }
+        for (const segment of segments) {
+          line(wallPoint(selected, segment.range[0]), wallPoint(selected, segment.range[1]), { stroke: segment.color, 'stroke-width': 3 });
+        }
+        const overlapA = wallPoint(selected, 0.46), overlapB = wallPoint(selected, 0.54);
+        const horizontal = selected === 'N' || selected === 'S';
+        make('rect', { x: horizontal ? overlapA[0] : overlapA[0] - 4, y: horizontal ? overlapA[1] - 4 : overlapA[1], width: horizontal ? overlapB[0] - overlapA[0] : 8, height: horizontal ? 8 : overlapB[1] - overlapA[1], fill: 'url(#segmented-overlap-hatch)' });
+        for (const wall of Object.keys(names)) {
+          for (const t of [0.06, 0.27, 0.46, 0.5, 0.54, 0.73, 0.94]) {
+            const [x, y] = wallPoint(wall, t);
+            const color = wall !== selected || (t >= 0.46 && t <= 0.54) ? 'var(--foreground)' : t < 0.46 ? segments[0].color : segments[1].color;
+            make('rect', { x: x - 2.5, y: y - 2.5, width: 5, height: 5, fill: color });
+          }
+        }
+        for (const [x, y] of [[0.2, 0.2], [0.8, 0.2], [0.8, 0.8], [0.2, 0.8]]) {
+          const p = xy(x, y);
+          make('polygon', { points: `${p[0]},${p[1] - 5} ${p[0] + 5},${p[1]} ${p[0]},${p[1] + 5} ${p[0] - 5},${p[1]}`, fill: 'var(--foreground)' });
+        }
+        label(0.5 * width, 0.2 * width + top - font * 0.85, '北墙');
+        label(0.5 * width, 0.8 * width + top + font * 1.2, '南墙');
+        const eastX = 0.8 * width - font * 1.6, westX = 0.2 * width + font * 1.6;
+        const middleY = 0.5 * width + top + font * 0.35;
+        note(eastX, middleY, '东墙');
+        note(westX, middleY, '西墙');
+        const centreY = 0.56 * width + top;
+        const boxWidth = font * 8.8;
+        make('rect', { x: 0.5 * width - boxWidth / 2, y: centreY - font * 1.1, width: boxWidth, height: font * 4.4, fill: 'var(--background)', 'fill-opacity': 0.94 });
+        label(0.5 * width, centreY, '50 m × 50 m');
+        label(0.5 * width, centreY + font * 1.45, 'D ≥ 50 m');
+        label(0.5 * width, centreY + font * 2.9, '坑内不布相机', { class: 'muted-label' });
+        for (const wall of Object.keys(names)) {
+          for (let index = 0; index < 4; index++) {
+            const [x, y] = cameraPoint(wall, index);
+            const active = wall === selected;
+            const color = active ? segments[index < 2 ? 0 : 1].color : 'var(--muted-foreground)';
+            make('circle', { cx: x, cy: y, r: active ? 6 : 5, fill: color, 'fill-opacity': active ? 1 : 0.55 });
+            let tx = x, ty = y, anchor = 'middle';
+            if (wall === 'N') ty += font * 1.2;
+            if (wall === 'S') ty -= font * 0.85;
+            if (wall === 'E') { tx += 11; ty += font * 0.35; anchor = 'start'; }
+            if (wall === 'W') { tx -= 11; ty += font * 0.35; anchor = 'end'; }
+            label(tx, ty, `${wall}${index + 1}`, { 'text-anchor': anchor, class: active ? '' : 'muted-label' });
+          }
+        }
+        for (const segment of segments) {
+          const p = cameraPoint(selected, segment.cameras[0]);
+          const q = cameraPoint(selected, segment.cameras[1]);
+          if (horizontal) {
+            const yy = p[1] + (selected === 'N' ? 2.3 : -2.3) * font;
+            line([p[0], yy], [q[0], yy], { stroke: segment.color, 'stroke-width': 1 });
+            for (const xx of [p[0], q[0]]) line([xx, yy - 3], [xx, yy + 3], { stroke: segment.color, 'stroke-width': 1 });
+            note((p[0] + q[0]) / 2, yy + (selected === 'N' ? 1.15 : -0.35) * font, 'B ≈ 20 m');
+          } else {
+            const xx = p[0] + (selected === 'E' ? 1 : -1) * font;
+            const y1 = p[1] + font, y2 = q[1] - font;
+            line([xx, y1], [xx, y2], { stroke: segment.color, 'stroke-width': 1 });
+            line([xx - 3, y1], [xx + 3, y1], { stroke: segment.color, 'stroke-width': 1 });
+            line([xx - 3, y2], [xx + 3, y2], { stroke: segment.color, 'stroke-width': 1 });
+            note(xx, (y1 + y2) / 2 + font * 0.35, 'B');
+          }
+        }
+        [[0.055, 0.11], [0.945, 0.11], [0.055, 0.89], [0.945, 0.89]].forEach(([x, y], index) => {
+          const p = xy(x, y);
+          label(p[0], p[1], `R${index + 1}`, { class: 'muted-label' });
+        });
+        buttons.forEach(button => button.setAttribute('aria-pressed', String(button.dataset.wall === selected)));
+        detail.textContent = `${names[selected]}：${selected}1 + ${selected}2 → A 段；${selected}3 + ${selected}4 → B 段（均位于${banks[selected]}外围）。`;
+      }
+      buttons.forEach(button => button.addEventListener('click', () => {
+        selected = button.dataset.wall;
+        draw();
+        window.openai?.setWidgetState?.({ modelContent: { selectedWall: selected, layout: 'sixteen-camera-segmented' }, privateContent: null })?.catch(() => {});
+      }));
+      window.addEventListener('openai:set_globals', event => {
+        restore(event.detail?.globals?.widgetState);
+        draw();
+      });
+      new ResizeObserver(draw).observe(root);
+      draw();
+    })();
+  </script>
+</div>

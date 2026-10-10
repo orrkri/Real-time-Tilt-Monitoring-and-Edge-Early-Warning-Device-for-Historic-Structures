@@ -1,0 +1,110 @@
+[
+  {
+    "plan": "对岸8台 · 早期构想",
+    "wall": "北墙",
+    "file": "docs/相机布置图/01_对岸8台_早期构想/北墙_相机布置.png",
+    "width": 1200,
+    "overflow": false,
+    "svg": 1208,
+    "texts": 18
+  },
+  {
+    "plan": "对岸8台 · 早期构想",
+    "wall": "东墙",
+    "file": "docs/相机布置图/01_对岸8台_早期构想/东墙_相机布置.png",
+    "width": 1200,
+    "overflow": false,
+    "svg": 1208,
+    "texts": 18
+  },
+  {
+    "plan": "对岸8台 · 早期构想",
+    "wall": "南墙",
+    "file": "docs/相机布置图/01_对岸8台_早期构想/南墙_相机布置.png",
+    "width": 1200,
+    "overflow": false,
+    "svg": 1208,
+    "texts": 18
+  },
+  {
+    "plan": "对岸8台 · 早期构想",
+    "wall": "西墙",
+    "file": "docs/相机布置图/01_对岸8台_早期构想/西墙_相机布置.png",
+    "width": 1200,
+    "overflow": false,
+    "svg": 1208,
+    "texts": 18
+  },
+  {
+    "plan": "对岸16台 · 分段构想",
+    "wall": "北墙",
+    "file": "docs/相机布置图/02_对岸16台_分段构想/北墙_相机布置.png",
+    "width": 1200,
+    "overflow": false,
+    "svg": 1295.1875,
+    "texts": 29
+  },
+  {
+    "plan": "对岸16台 · 分段构想",
+    "wall": "东墙",
+    "file": "docs/相机布置图/02_对岸16台_分段构想/东墙_相机布置.png",
+    "width": 1200,
+    "overflow": false,
+    "svg": 1295.1875,
+    "texts": 29
+  },
+  {
+    "plan": "对岸16台 · 分段构想",
+    "wall": "南墙",
+    "file": "docs/相机布置图/02_对岸16台_分段构想/南墙_相机布置.png",
+    "width": 1200,
+    "overflow": false,
+    "svg": 1295.1875,
+    "texts": 29
+  },
+  {
+    "plan": "对岸16台 · 分段构想",
+    "wall": "西墙",
+    "file": "docs/相机布置图/02_对岸16台_分段构想/西墙_相机布置.png",
+    "width": 1200,
+    "overflow": false,
+    "svg": 1295.1875,
+    "texts": 29
+  },
+  {
+    "plan": "相邻边16台 · 当前候选",
+    "wall": "北墙",
+    "file": "docs/相机布置图/03_相邻边16台_当前候选/北墙_相机布置.png",
+    "width": 1200,
+    "overflow": false,
+    "svg": 1295.1875,
+    "texts": 36
+  },
+  {
+    "plan": "相邻边16台 · 当前候选",
+    "wall": "东墙",
+    "file": "docs/相机布置图/03_相邻边16台_当前候选/东墙_相机布置.png",
+    "width": 1200,
+    "overflow": false,
+    "svg": 1295.1875,
+    "texts": 36
+  },
+  {
+    "plan": "相邻边16台 · 当前候选",
+    "wall": "南墙",
+    "file": "docs/相机布置图/03_相邻边16台_当前候选/南墙_相机布置.png",
+    "width": 1200,
+    "overflow": false,
+    "svg": 1295.1875,
+    "texts": 36
+  },
+  {
+    "plan": "相邻边16台 · 当前候选",
+    "wall": "西墙",
+    "file": "docs/相机布置图/03_相邻边16台_当前候选/西墙_相机布置.png",
+    "width": 1200,
+    "overflow": false,
+    "svg": 1295.1875,
+    "texts": 36
+  }
+]
